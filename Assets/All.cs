@@ -1,9 +1,15 @@
+using System.Collections.Generic;
+using System.IO;
+using System.Threading.Tasks;
 using UnityEngine;
-using UnityEngine.UI;
+using UnityEngine.Networking;
+using TMPro;
 
 public class All : MonoBehaviour
 {
-    [SerializeField] Image _image;
+    [SerializeField] TextMeshProUGUI _filename;
+
+    string _path = string.Empty;
 
     public void PickImage()
     {
@@ -21,8 +27,33 @@ public class All : MonoBehaviour
                 Debug.Log($"Cannot load image at path ${path}");
             }
 
-            var sprite = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f));
-            _image.sprite = sprite;
+            _path = path;
+            _filename.text = _path;
         });
+    }
+
+    public async void Upload()
+    {
+        if (string.IsNullOrEmpty(_path) || string.IsNullOrWhiteSpace(_path))
+        {
+            Debug.Log("No file to upload");
+            return;
+        }
+
+        var contentInBytes = await File.ReadAllBytesAsync(_path);
+
+        var reqForm = new List<IMultipartFormSection>();
+        reqForm.Add(new MultipartFormDataSection("data", contentInBytes));
+
+        var apiUrl = "https://ipfs-server.vercel.app/upload";
+        var req = UnityWebRequest.Post(apiUrl, reqForm);
+
+        var reqSender = req.SendWebRequest();
+        while (!reqSender.isDone)
+        {
+            await Task.Delay(100 / 24);
+        }
+
+        Debug.Log("Result: " + req.result.ToString());
     }
 }
